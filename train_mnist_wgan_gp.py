@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -47,8 +48,20 @@ with tf.device('/gpu:%d' % gpu_id):
     # losses
     def gradient_penalty(real, fake, f):
         def interpolate(a, b):
-            shape = tf.concat((tf.shape(a)[0:1], tf.tile([1], [a.shape.ndims - 1])), axis=0)
+            # batch_size,1,1,1
+            shape = tf.concat(
+                (
+                    # batch_size
+                    tf.shape(a)[0:1],
+                    tf.tile(
+                        [1],
+                        [a.shape.ndims - 1]
+                    )
+                ),
+                axis=0
+            )
             alpha = tf.random_uniform(shape=shape, minval=0., maxval=1.)
+            # 利用广播来进行插值
             inter = a + alpha * (b - a)
             inter.set_shape(a.get_shape().as_list())
             return inter
@@ -56,7 +69,13 @@ with tf.device('/gpu:%d' % gpu_id):
         x = interpolate(real, fake)
         pred = f(x)
         gradients = tf.gradients(pred, x)[0]
-        slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=range(1, x.shape.ndims)))
+        # 计算梯度的范数
+        slopes = tf.sqrt(
+            tf.reduce_sum(
+                tf.square(gradients),
+                reduction_indices=range(1, x.shape.ndims)
+            )
+        )
         gp = tf.reduce_mean((slopes - 1.)**2)
         return gp
 
@@ -99,7 +118,7 @@ if not utils.load_checkpoint(ckpt_dir, sess):
 ''' train '''
 try:
     z_ipt_sample = np.random.normal(size=[100, z_dim])
-
+    # 训练判别器和训练生成器的batch是分开的
     batch_epoch = len(data_pool) // (batch_size * n_critic)
     max_it = epoch * batch_epoch
     for it in range(sess.run(it_cnt), max_it):
@@ -107,6 +126,7 @@ try:
 
         # which epoch
         epoch = it // batch_epoch
+        # 每个epoch中的第几个batch
         it_epoch = it % batch_epoch + 1
 
         # train D
@@ -133,6 +153,7 @@ try:
 
         # sample
         if (it + 1) % 100 == 0:
+            # sample的z_ipt_sample在整个训练过程中不变，确保sample到的是同一个样本
             f_sample_opt = sess.run(f_sample, feed_dict={z: z_ipt_sample})
 
             save_dir = './sample_images_while_training/mnist_wgan_gp'

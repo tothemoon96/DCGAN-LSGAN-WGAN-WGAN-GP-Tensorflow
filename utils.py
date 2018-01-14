@@ -214,8 +214,16 @@ class MemoryData:
             # There are some strange errors if the gpu device is the
             # same with the main graph, but cpu device is ok. I don't know why...
             with tf.device('/cpu:0'):
-                self._batch_ops, self._data_num, self._fields = memory_data_batch(memory_data_dict, batch_size, preprocess_fns, shuffle, num_threads,
-                                                                                  min_after_dequeue, allow_smaller_final_batch, scope)
+                self._batch_ops, self._data_num, self._fields = memory_data_batch(
+                    memory_data_dict,
+                    batch_size,
+                    preprocess_fns,
+                    shuffle,
+                    num_threads,
+                    min_after_dequeue,
+                    allow_smaller_final_batch,
+                    scope
+                )
 
         print(' [*] MemoryData: create session!')
         self.sess = session(graph=self.graph)
